@@ -1,9 +1,15 @@
 # Changelog
 
-## [0.0.27] - 18.09.2025
+## [0.0.28] - 04.11.2025
 
 ### Added
 - Argus call graph
+
+## [0.0.27] - 14.10.2025
+
+### Added
+- Halmos Fuzzer
+- Vyper Compilation
 
 ## [0.0.26] - 08.08.2025
 
