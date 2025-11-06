@@ -21,7 +21,7 @@ export async function findOutputDirectory(workspaceRoot: string): Promise<string
             const outPath = match[1];
             return path.join(path.dirname(foundryConfigPath), outPath);
         }
-        return path.join(workspaceRoot, 'out');
+        return path.join(path.dirname(foundryConfigPath), 'out');
     } catch {
         return path.join(workspaceRoot, 'out');
     }

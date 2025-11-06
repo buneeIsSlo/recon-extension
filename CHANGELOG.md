@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.29] - 05.11.2025
+
+### fix
+- Argus for non-abstract contracts
+- Argus non-root foundry config
+
 ## [0.0.28] - 04.11.2025
 
 ### Added
@@ -71,6 +77,8 @@
 - Coverage report compatibility with new Medusa report format
 - Issue with fuzzer not stopping
 
+[0.0.29]: https://github.com/Recon-Fuzz/recon-extension/releases/tag/v0.0.29
+[0.0.28]: https://github.com/Recon-Fuzz/recon-extension/releases/tag/v0.0.28
 [0.0.27]: https://github.com/Recon-Fuzz/recon-extension/releases/tag/v0.0.27
 [0.0.26]: https://github.com/Recon-Fuzz/recon-extension/releases/tag/v0.0.26
 [0.0.25]: https://github.com/Recon-Fuzz/recon-extension/releases/tag/v0.0.25
