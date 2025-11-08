@@ -37,7 +37,7 @@ export function processCompilerOutput(
       continue;
     }
     for (const contract of ast.getChildrenByType($.ContractDefinition)) {
-      if (!contract.fullyImplemented || contract.abstract || contract.kind !== 'contract') {
+      if (contract.kind !== 'contract') {
         continue;
       }
       totalContracts++;
@@ -49,7 +49,7 @@ export function processCompilerOutput(
       continue;
     }
     for (const contract of ast.getChildrenByType($.ContractDefinition)) {
-      if (!contract.fullyImplemented || contract.abstract || contract.kind !== 'contract') {
+      if (contract.kind !== 'contract') {
         continue;
       }
 

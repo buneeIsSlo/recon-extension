@@ -96,10 +96,10 @@ export async function generateCallGraph(options: ArgusGenerateOptions): Promise<
     const contracts: ArgusGenerateResult['contracts'] = [];
     const errors: string[] = [];
     for (const contract of targetUnit.getChildrenByType($ .ContractDefinition)) {
-      if (!contract.fullyImplemented || contract.abstract || contract.kind !== 'contract') continue;
+      if (contract.kind !== 'contract') { continue; }
       try {
         const processed = processContract(contract, options.includeAll, options.includeDeps);
-        if (processed.vFunctions.length === 0) continue;
+        if (processed.vFunctions.length === 0) { continue; }
         // Always compute storage slot layout so slots viewer is shown regardless of includeAll flag
         const slotData = processSlots(contract);
         let html = generateCombinedHTMLTree(
@@ -138,7 +138,7 @@ export async function generateCallGraph(options: ArgusGenerateOptions): Promise<
       }
     }
     if (contracts.length === 0) {
-      return stub('No non-abstract contracts with eligible functions in this file.');
+      return stub('No contracts with eligible functions in this file.');
     }
   return { html: '<div>Unknown state</div>', contracts, errors, empty: false, primaryContractName: contracts[0]?.name };
   } catch (err) {
@@ -154,10 +154,10 @@ export async function generateCallGraph(options: ArgusGenerateOptions): Promise<
 
 async function findLatestBuildInfoFile(buildInfoDir: string): Promise<string | null> {
   try {
-    if (!fs.existsSync(buildInfoDir)) return null;
+    if (!fs.existsSync(buildInfoDir)) { return null; }
     const files = await fs.promises.readdir(buildInfoDir);
     const jsonFiles = files.filter(f => f.endsWith('.json'));
-    if (jsonFiles.length === 0) return null;
+    if (jsonFiles.length === 0) { return null; }
     const stats = await Promise.all(jsonFiles.map(async f => {
       const fp = path.join(buildInfoDir, f);
       const st = await fs.promises.stat(fp);
@@ -175,6 +175,7 @@ function stub(message: string, showBuild?: boolean): ArgusGenerateResult {
     html: `<div style="font-family:var(--vscode-font-family);padding:16px;">`+
       `<p>${escapeHtml(message)}</p>`+
        (showBuild ? `<div style="margin-top:8px;display:flex;gap:8px;">`+
+         `<button data-action="select-foundry-config">Select foundry.toml</button>`+
          `<button data-action="run-build">Run Build</button>`+
        `</div>`: '')+
       `</div>`,
@@ -205,7 +206,7 @@ function sanitizeGraphHtml(html: string): string {
 
 function injectPrism(html: string): string {
   // If already has our marker, skip
-  if (html.includes('data-prism-inline')) return html;
+  if (html.includes('data-prism-inline')) { return html; }
   // We still keep token CSS but omit injecting the JS portion because provider now loads external prism scripts.
   const delegationJs = `document.addEventListener('click', function(e){
     var target = e.target;

@@ -103,7 +103,7 @@ export function registerBuildCommands(
             outputChannel.clear();
             outputChannel.appendLine('Starting Forge build (with build-info)...');
 
-            const baseCmd = 'forge build --build-info --skip test --skip tests --skip script --skip scripts';
+            const baseCmd = 'forge build --build-info --skip */test/** */tests/** */script/** */scripts/** */contracts/test/**';
             // Return the progress promise so callers (e.g., Argus webview) can await completion
             return vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,

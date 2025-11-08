@@ -70,6 +70,11 @@ export class ArgusCallGraphEditorProvider implements vscode.CustomTextEditorProv
               scheduleUpdate();
             });
           break;
+        case 'selectFoundryConfig':
+          this.selectFoundryConfig().then(() => {
+            scheduleUpdate();
+          });
+          break;
         case 'copyToClipboard':
           if (typeof msg.text === 'string' && msg.text.length > 0) {
             vscode.env.clipboard.writeText(msg.text).then(() => {
@@ -135,6 +140,38 @@ export class ArgusCallGraphEditorProvider implements vscode.CustomTextEditorProv
 
     updateWebview();
   }
+
+  private async selectFoundryConfig(): Promise<void> {
+    if (!vscode.workspace.workspaceFolders) {
+      return;
+    }
+
+    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri;
+    const files = await vscode.workspace.findFiles(
+      new vscode.RelativePattern(workspaceRoot, '**/foundry.toml'),
+      '**/node_modules/**'
+    );
+
+    if (files.length === 0) {
+      vscode.window.showWarningMessage('No foundry.toml files found in workspace');
+      return;
+    }
+
+    const items = files.map(file => ({
+      label: vscode.workspace.asRelativePath(file),
+      file
+    }));
+
+    const selected = await vscode.window.showQuickPick(items, {
+      placeHolder: 'Select foundry.toml file'
+    });
+
+    if (selected) {
+      const config = vscode.workspace.getConfiguration('recon');
+      await config.update('foundryConfigPath', vscode.workspace.asRelativePath(selected.file), vscode.ConfigurationTarget.Workspace);
+    }
+  }
+
   private getLoadingHtml(document: vscode.TextDocument, _settings: ArgusSettings): string {
     const fileName = vscode.workspace.asRelativePath(document.uri);
     return `<div style="font-family:var(--vscode-font-family);padding:16px;">Generating Argus Call Graph for <code>${escapeHtml(vscode.workspace.asRelativePath(document.uri))}</code>...</div>`;
@@ -296,6 +333,10 @@ document.addEventListener('click', function(e){
   var action = el.getAttribute('data-action');
   if(action==='run-build'){
     vscode.postMessage({ type: 'runBuild' });
+    return;
+  }
+  if(action==='select-foundry-config'){
+    vscode.postMessage({ type: 'selectFoundryConfig' });
     return;
   }
   if(action==='toggle-node'){ console.log('[Argus] delegation toggle-node', el.getAttribute('data-node-id')); toggleNode(el.getAttribute('data-node-id')); }

@@ -1,8 +1,8 @@
 {
   "name": "recon",
   "displayName": "Recon",
-  "description": "Seamless integration of Foundry, Medusa, Echidna, and Halmos for smart contract testing",
-  "version": "0.0.28",
+  "description": "Scaffold and run Invariant Tests with Medusa, Echidna and Halmos, automatically debug broken properties with Foundry",
+  "version": "0.0.30",
   "license": "GPL-2.0",
   "publisher": "Recon-Fuzz",
   "repository": {
@@ -472,5 +472,8 @@
     "prismjs": "^1.30.0",
     "solc-typed-ast": "^18.2.5",
     "yaml": "^2.8.0"
+  },
+  "overrides": {
+    "tmp": "0.2.4"
   }
 }
