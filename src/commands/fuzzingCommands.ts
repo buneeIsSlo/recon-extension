@@ -11,6 +11,7 @@ import {
   getEnvironmentPath,
 } from "../utils";
 import { ServiceContainer } from "../services/serviceContainer";
+import { ToolValidationService } from "../services/toolValidationService";
 
 export function registerFuzzingCommands(
   context: vscode.ExtensionContext,
@@ -57,6 +58,31 @@ async function runFuzzer(
     return;
   }
 
+  // Validate that the fuzzer tool is available (echidna and medusa)
+  let validatedCommand: string | undefined;
+  if (fuzzerType === Fuzzer.ECHIDNA || fuzzerType === Fuzzer.MEDUSA) {
+    const validationService = new ToolValidationService();
+    const fuzzerName = fuzzerType === Fuzzer.ECHIDNA ? "echidna" : "medusa";
+    const validation = await validationService.validateFuzzer(fuzzerName);
+
+    if (!validation.isValid) {
+      const result = await vscode.window.showWarningMessage(
+        validation.error || `${fuzzerName} not found`,
+        "Open Settings",
+        "Cancel"
+      );
+
+      if (result === "Open Settings") {
+        vscode.commands.executeCommand(
+          "workbench.action.openSettings",
+          `recon.${fuzzerName}.path`
+        );
+      }
+      return;
+    }
+    validatedCommand = validation.command;
+  }
+
   const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
   const foundryConfigPath = getFoundryConfigPath(workspaceRoot);
   const foundryRoot = path.dirname(foundryConfigPath);
@@ -69,7 +95,7 @@ async function runFuzzer(
     const testLimit = config.get<number>("testLimit", 1000000);
     const mode = config.get<string>("mode", "assertion");
 
-    command = `echidna . --contract ${
+    command = `${validatedCommand || "echidna"} . --contract ${
       target || "CryticTester"
     } --config echidna.yaml --format text --workers ${
       workers || 10
@@ -79,7 +105,7 @@ async function runFuzzer(
     const workers = config.get<number>("workers", 10);
     const testLimit = config.get<number>("testLimit", 0);
 
-    command = `medusa fuzz --workers ${
+    command = `${validatedCommand || "medusa"} fuzz --workers ${
       workers || 10
     } --test-limit ${testLimit}`;
     if (target !== "CryticTester") {
