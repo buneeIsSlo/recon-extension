@@ -12,6 +12,7 @@ import {
 } from "../utils";
 import { ServiceContainer } from "../services/serviceContainer";
 import { ToolValidationService } from "../services/toolValidationService";
+import { filterIgnoredProperties } from "../utils/propertyFilter";
 
 export function registerFuzzingCommands(
   context: vscode.ExtensionContext,
@@ -248,8 +249,9 @@ async function runFuzzer(
                   }
 
                   // Handle broken properties
-                  if (results.brokenProperties.length > 0) {
-                    const repros = results.brokenProperties
+                  const filteredProperties = filterIgnoredProperties(results.brokenProperties);
+                  if (filteredProperties.length > 0) {
+                    const repros = filteredProperties
                       .map((prop) =>
                         prepareTrace(
                           fuzzerType,

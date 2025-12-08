@@ -9,6 +9,8 @@ import {
   FuzzingResults,
 } from "@recon-fuzz/log-parser";
 
+import { filterIgnoredProperties } from "../utils/propertyFilter";
+
 interface VmOptions {
   prank: boolean;
   roll: boolean;
@@ -95,6 +97,9 @@ export class LogToFoundryViewProvider {
         log,
         fuzzer.toUpperCase() as unknown as Fuzzer
       );
+
+      // Filter out ignored properties
+      jobStats.brokenProperties = filterIgnoredProperties(jobStats.brokenProperties);
 
       if (
         !jobStats.brokenProperties ||
