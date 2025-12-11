@@ -313,7 +313,7 @@
           "items": {
             "type": "string"
           },
-          "default": [],
+          "default": ["canary_*"],
           "scope": "resource",
           "order": 3,
           "description": "Glob patterns to filter out properties (e.g., canary_*)"

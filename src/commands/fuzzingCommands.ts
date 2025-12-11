@@ -263,7 +263,7 @@ async function runFuzzer(
                       .join("\n\n");
 
                     const answer = await vscode.window.showInformationMessage(
-                      `Found ${results.brokenProperties.length} broken properties. Save Foundry reproductions?`,
+                      `Found ${filteredProperties.length} broken properties. Save Foundry reproductions?`,
                       { modal: true },
                       "Yes",
                       "No"
