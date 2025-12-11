@@ -152,8 +152,9 @@ async function runFuzzer(
         childProcess = require("child_process").spawn(command, {
           cwd: foundryRoot,
           shell: true,
-          detached: true,
-          ...(process.platform !== "win32" && { stdio: "pipe" }),
+          ...(process.platform === "win32" 
+            ? { stdio: "pipe", detached: false }
+            : { stdio: "pipe", detached: true }),
           env: {
             ...process.env,
             PATH: getEnvironmentPath(),
