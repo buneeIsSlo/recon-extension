@@ -253,7 +253,6 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         }
                     }
 
-                    // Listen for button clicks
                     document.addEventListener('click', (e) => {
                         const button = e.target.closest('vscode-button');
                         if (!button) return;
@@ -271,7 +270,6 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         }
                     });
 
-                    // Handle Echidna mode changes
                     document.getElementById('echidna-mode')?.addEventListener('change', (e) => {
                         vscode.postMessage({
                             type: 'updateEchidnaMode',
@@ -279,7 +277,6 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         });
                     });
 
-                    // Handle test limit changes
                     document.getElementById('echidna-test-limit')?.addEventListener('change', (e) => {
                         const value = parseInt(e.target.value, 10);
                         if (!isNaN(value) && value >= 1) {
@@ -290,7 +287,6 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         }
                     });
 
-                    // Handle Echidna workers changes - save on every keystroke
                     document.getElementById('echidna-workers')?.addEventListener('input', (e) => {
                         const value = e.target.value;
                         updateAutoLabel('echidna-workers', 'echidna-auto-label');
@@ -300,10 +296,9 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         });
                     });
                     
-                    // Handle Medusa test limit changes
                     document.getElementById('medusa-test-limit')?.addEventListener('change', (e) => {
                         const value = parseInt(e.target.value, 10);
-                        if (!isNaN(value) && value >= 0) {
+                        if (!isNaN(value) && value >= 1) {  // ← back to 1
                             vscode.postMessage({
                                 type: 'updateMedusaTestLimit',
                                 value: value
@@ -311,7 +306,6 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         }
                     });
 
-                    // Handle Medusa workers changes - save on every keystroke
                     document.getElementById('medusa-workers')?.addEventListener('input', (e) => {
                         const value = e.target.value;
                         updateAutoLabel('medusa-workers', 'medusa-auto-label');
@@ -331,7 +325,6 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         }
                     });
 
-                    // Handle fuzzer selection changes
                     const radioGroup = document.getElementById('fuzzer-selection');
                     if (radioGroup) {
                         radioGroup.addEventListener('change', (e) => {
@@ -376,7 +369,6 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         });
                     }
 
-                    // Initialize auto labels on load
                     setTimeout(() => {
                         updateAutoLabel('echidna-workers', 'echidna-auto-label');
                         updateAutoLabel('medusa-workers', 'medusa-auto-label');
@@ -414,7 +406,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
         const echidnaTestLimit = config.get('echidna.testLimit', 1000000);
         const echidnaWorkers = config.get<number | null>('echidna.workers', null);
         const echidnaOverride = config.get<boolean>('echidna.workersOverride', false);
-        const medusaTestLimit = config.get('medusa.testLimit', 0);
+        const medusaTestLimit = config.get('medusa.testLimit', 1000000);  // keep default 1+ semantics if you want
         const medusaWorkers = config.get<number | null>('medusa.workers', null);
         const medusaOverride = config.get<boolean>('medusa.workersOverride', false);
         const halmosLoop = config.get('halmos.loop', 10);
@@ -494,7 +486,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                             id="medusa-test-limit"
                             type="number"
                             value="${medusaTestLimit}"
-                            min="0"
+                            min="1"
                         ></vscode-text-field>
                     </div>
                     <div class="setting-group">
