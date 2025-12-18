@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { getFoundryConfigPath } from './utils';
 import { EchidnaMode, FuzzerTool } from './types';
+import { getOptimalWorkerCount } from './utils/workerConfig';
 
 export class ReconMainViewProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
@@ -35,13 +36,17 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                     await vscode.workspace.getConfiguration('recon').update('echidna.testLimit', message.value, vscode.ConfigurationTarget.Workspace);
                     break;
                 case 'updateEchidnaWorkers':
-                    await vscode.workspace.getConfiguration('recon').update('echidna.workers', message.value, vscode.ConfigurationTarget.Workspace);
+                    const echidnaValue = message.value === '' ? null : parseInt(message.value, 10);
+                    await vscode.workspace.getConfiguration('recon').update('echidna.workers', echidnaValue, vscode.ConfigurationTarget.Workspace);
+                    await vscode.workspace.getConfiguration('recon').update('echidna.workersOverride', echidnaValue !== null, vscode.ConfigurationTarget.Workspace);
                     break;
                 case 'updateMedusaTestLimit':
                     await vscode.workspace.getConfiguration('recon').update('medusa.testLimit', message.value, vscode.ConfigurationTarget.Workspace);
                     break;
                 case 'updateMedusaWorkers':
-                    await vscode.workspace.getConfiguration('recon').update('medusa.workers', message.value, vscode.ConfigurationTarget.Workspace);
+                    const medusaValue = message.value === '' ? null : parseInt(message.value, 10);
+                    await vscode.workspace.getConfiguration('recon').update('medusa.workers', medusaValue, vscode.ConfigurationTarget.Workspace);
+                    await vscode.workspace.getConfiguration('recon').update('medusa.workersOverride', medusaValue !== null, vscode.ConfigurationTarget.Workspace);
                     break;
                 case 'updateHalmosLoop':
                     await vscode.workspace.getConfiguration('recon').update('halmos.loop', message.value, vscode.ConfigurationTarget.Workspace);
@@ -51,7 +56,6 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'updateDefaultFuzzer':
                     await vscode.workspace.getConfiguration('recon').update('defaultFuzzer', message.value, vscode.ConfigurationTarget.Workspace);
-                    this._updateWebview();
                     break;
                 case 'runFuzzer':
                     const defaultFuzzer = vscode.workspace.getConfiguration('recon').get<string>('defaultFuzzer', FuzzerTool.ECHIDNA);
@@ -186,12 +190,18 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                     }
                     .setting-group {
                         display: flex;
-                        align-items: center;
-                        gap: 8px;
+                        flex-direction: column;
+                        gap: 4px;
                     }
                     .setting-group label {
-                        min-width: 100px;
                         font-size: 12px;
+                    }
+                    .auto-workers-label {
+                        font-size: 11px;
+                        color: var(--vscode-descriptionForeground);
+                        font-style: italic;
+                        margin-left: 2px;
+                        min-height: 16px;
                     }
                     vscode-dropdown, vscode-text-field {
                         flex: 1;
@@ -231,12 +241,24 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                 <script>
                     const vscode = acquireVsCodeApi();
                     
-                    // Listen for button clicks and handle based on data attributes
+                    function updateAutoLabel(inputId, labelId) {
+                        const input = document.getElementById(inputId);
+                        const label = document.getElementById(labelId);
+                        if (!input || !label) return;
+                        
+                        if (input.value === '' || input.value === null || input.value === undefined) {
+                            label.style.visibility = 'visible';
+                        } else {
+                            label.style.visibility = 'hidden';
+                        }
+                    }
+
+                    // Listen for button clicks
                     document.addEventListener('click', (e) => {
                         const button = e.target.closest('vscode-button');
                         if (!button) return;
                         const target = document.getElementById('target-contract')?.value || 'CryticTester';
-                        // Check for specific button actions
+                        
                         if (button.id === 'settings-btn') {
                             vscode.postMessage({ type: 'openSettings' });
                         } else if (button.id === 'fuzz-btn') {
@@ -268,21 +290,20 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         }
                     });
 
-                    // Handle workers changes
-                    document.getElementById('echidna-workers')?.addEventListener('change', (e) => {
-                        const value = parseInt(e.target.value, 10);
-                        if (!isNaN(value) && value >= 1) {
-                            vscode.postMessage({
-                                type: 'updateEchidnaWorkers',
-                                value: value
-                            });
-                        }
+                    // Handle Echidna workers changes - save on every keystroke
+                    document.getElementById('echidna-workers')?.addEventListener('input', (e) => {
+                        const value = e.target.value;
+                        updateAutoLabel('echidna-workers', 'echidna-auto-label');
+                        vscode.postMessage({
+                            type: 'updateEchidnaWorkers',
+                            value: value
+                        });
                     });
                     
                     // Handle Medusa test limit changes
                     document.getElementById('medusa-test-limit')?.addEventListener('change', (e) => {
                         const value = parseInt(e.target.value, 10);
-                        if (!isNaN(value) && value >= 1) {
+                        if (!isNaN(value) && value >= 0) {
                             vscode.postMessage({
                                 type: 'updateMedusaTestLimit',
                                 value: value
@@ -290,15 +311,14 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         }
                     });
 
-                    // Handle Medusa workers changes
-                    document.getElementById('medusa-workers')?.addEventListener('change', (e) => {
-                        const value = parseInt(e.target.value, 10);
-                        if (!isNaN(value) && value >= 1) {
-                            vscode.postMessage({
-                                type: 'updateMedusaWorkers',
-                                value: value
-                            });
-                        }
+                    // Handle Medusa workers changes - save on every keystroke
+                    document.getElementById('medusa-workers')?.addEventListener('input', (e) => {
+                        const value = e.target.value;
+                        updateAutoLabel('medusa-workers', 'medusa-auto-label');
+                        vscode.postMessage({
+                            type: 'updateMedusaWorkers',
+                            value: value
+                        });
                     });
 
                     document.getElementById('halmos-loop')?.addEventListener('change', (e) => {
@@ -311,25 +331,56 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         }
                     });
 
-                    // Update settings visibility based on fuzzer selection
-                    document.getElementById('fuzzer-selection')?.addEventListener('change', (e) => {
-                        const echidnaSettings = document.getElementById('echidna-settings');
-                        const medusaSettings = document.getElementById('medusa-settings');
-                        if (e.target.value === '${FuzzerTool.ECHIDNA}') {
-                            echidnaSettings.style.display = '';
-                            medusaSettings.style.display = 'none';
-                        } else if (e.target.value === '${FuzzerTool.MEDUSA}') {
-                            echidnaSettings.style.display = 'none';
-                            medusaSettings.style.display = '';
-                        } else if (e.target.value === '${FuzzerTool.HALMOS}') {
-                            echidnaSettings.style.display = 'none';
-                            medusaSettings.style.display = 'none';
-                        }
-                        vscode.postMessage({
-                            type: 'updateDefaultFuzzer',
-                            value: e.target.value
+                    // Handle fuzzer selection changes
+                    const radioGroup = document.getElementById('fuzzer-selection');
+                    if (radioGroup) {
+                        radioGroup.addEventListener('change', (e) => {
+                            const selectedValue = e.target.value;
+                            
+                            const echidnaSettings = document.getElementById('echidna-settings');
+                            const medusaSettings = document.getElementById('medusa-settings');
+                            const halmosSettings = document.getElementById('halmos-settings');
+                            
+                            const fuzzBtn = document.getElementById('fuzz-btn');
+                            const btnContent = fuzzBtn?.querySelector('.generate-btn-content');
+                            
+                            if (selectedValue === '${FuzzerTool.ECHIDNA}') {
+                                echidnaSettings.style.display = '';
+                                medusaSettings.style.display = 'none';
+                                halmosSettings.style.display = 'none';
+                                setTimeout(() => updateAutoLabel('echidna-workers', 'echidna-auto-label'), 0);
+                                if (btnContent) {
+                                    btnContent.innerHTML = '<i class="codicon codicon-beaker"></i>Fuzz with Echidna';
+                                }
+                            } else if (selectedValue === '${FuzzerTool.MEDUSA}') {
+                                echidnaSettings.style.display = 'none';
+                                medusaSettings.style.display = '';
+                                halmosSettings.style.display = 'none';
+                                setTimeout(() => updateAutoLabel('medusa-workers', 'medusa-auto-label'), 0);
+                                if (btnContent) {
+                                    btnContent.innerHTML = '<i class="codicon codicon-beaker"></i>Fuzz with Medusa';
+                                }
+                            } else if (selectedValue === '${FuzzerTool.HALMOS}') {
+                                echidnaSettings.style.display = 'none';
+                                medusaSettings.style.display = 'none';
+                                halmosSettings.style.display = '';
+                                if (btnContent) {
+                                    btnContent.innerHTML = '<i class="codicon codicon-beaker"></i>Verify with Halmos';
+                                }
+                            }
+                            
+                            vscode.postMessage({
+                                type: 'updateDefaultFuzzer',
+                                value: selectedValue
+                            });
                         });
-                    });
+                    }
+
+                    // Initialize auto labels on load
+                    setTimeout(() => {
+                        updateAutoLabel('echidna-workers', 'echidna-auto-label');
+                        updateAutoLabel('medusa-workers', 'medusa-auto-label');
+                    }, 0);
                 </script>
             </body>
         </html>`;
@@ -361,10 +412,21 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
         const defaultFuzzer = config.get('defaultFuzzer') || FuzzerTool.ECHIDNA;
         const echidnaMode = config.get('echidna.mode', EchidnaMode.ASSERTION) as EchidnaMode;
         const echidnaTestLimit = config.get('echidna.testLimit', 1000000);
-        const echidnaWorkers = config.get('echidna.workers', 1);
-        const medusaTestLimit = config.get('medusa.testLimit', 1000000);
-        const medusaWorkers = config.get('medusa.workers', 1);
+        const echidnaWorkers = config.get<number | null>('echidna.workers', null);
+        const echidnaOverride = config.get<boolean>('echidna.workersOverride', false);
+        const medusaTestLimit = config.get('medusa.testLimit', 0);
+        const medusaWorkers = config.get<number | null>('medusa.workers', null);
+        const medusaOverride = config.get<boolean>('medusa.workersOverride', false);
         const halmosLoop = config.get('halmos.loop', 10);
+
+        const echidnaAutoWorkers = getOptimalWorkerCount('echidna');
+        const medusaAutoWorkers = getOptimalWorkerCount('medusa');
+
+        const showEchidnaAuto = !echidnaOverride;
+        const showMedusaAuto = !medusaOverride;
+
+        const echidnaDisplayValue = echidnaOverride && echidnaWorkers !== null ? echidnaWorkers.toString() : '';
+        const medusaDisplayValue = medusaOverride && medusaWorkers !== null ? medusaWorkers.toString() : '';
 
         return `
             <div class="button-container">
@@ -415,9 +477,13 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         <vscode-text-field
                             id="echidna-workers"
                             type="number"
-                            value="${echidnaWorkers}"
+                            value="${echidnaDisplayValue}"
                             min="1"
+                            placeholder="Auto"
                         ></vscode-text-field>
+                        <span id="echidna-auto-label" class="auto-workers-label" style="visibility: ${showEchidnaAuto ? 'visible' : 'hidden'}">
+                            Auto selected: ${echidnaAutoWorkers}
+                        </span>
                     </div>
                 </div>
 
@@ -428,7 +494,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                             id="medusa-test-limit"
                             type="number"
                             value="${medusaTestLimit}"
-                            min="1"
+                            min="0"
                         ></vscode-text-field>
                     </div>
                     <div class="setting-group">
@@ -436,13 +502,18 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         <vscode-text-field
                             id="medusa-workers"
                             type="number"
-                            value="${medusaWorkers}"
+                            value="${medusaDisplayValue}"
                             min="1"
+                            placeholder="Auto"
                         ></vscode-text-field>
+                        <span id="medusa-auto-label" class="auto-workers-label" style="visibility: ${showMedusaAuto ? 'visible' : 'hidden'}">
+                            Auto selected: ${medusaAutoWorkers}
+                        </span>
                     </div>
                 </div>
+                
                 <div class="settings-container" ${defaultFuzzer !== FuzzerTool.HALMOS ? 'style="display: none;"' : ''} id="halmos-settings">
-                    <div class="setting-group" style="margin-top:12px;">
+                    <div class="setting-group">
                         <label>Target:</label>
                         <vscode-text-field
                             id="target-contract"
