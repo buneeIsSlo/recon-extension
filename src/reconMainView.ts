@@ -4,13 +4,17 @@ import { getFoundryConfigPath } from './utils';
 import { EchidnaMode, FuzzerTool } from './types';
 import { getOptimalWorkerCount } from './utils/workerConfig';
 
+
 export class ReconMainViewProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
+    private _configChangeDisposable?: vscode.Disposable;
+
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
     ) {
     }
+
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
@@ -19,10 +23,24 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
     ) {
         this._view = webviewView;
 
+
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [this._extensionUri]
         };
+
+
+        // Clean up old listener if it exists
+        if (this._configChangeDisposable) {
+            this._configChangeDisposable.dispose();
+        }
+
+        // Listen to config changes and refresh on uncapWorkers or reservedCores change
+        this._configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('recon.uncapWorkers') || e.affectsConfiguration('recon.reservedCores')) {
+                this._updateWebview();
+            }
+        });
 
         webviewView.webview.onDidReceiveMessage(async message => {
             switch (message.type) {
@@ -70,11 +88,14 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
             }
         });
 
+
         this._updateWebview();
     }
 
+
     private async selectFoundryConfig(): Promise<void> {
         if (!vscode.workspace.workspaceFolders) { return; }
+
 
         const workspaceRoot = vscode.workspace.workspaceFolders[0].uri;
         const files = await vscode.workspace.findFiles(
@@ -82,19 +103,23 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
             '**/node_modules/**'
         );
 
+
         if (files.length === 0) {
             vscode.window.showErrorMessage('No foundry.toml files found in workspace');
             return;
         }
+
 
         const items = files.map(file => ({
             label: vscode.workspace.asRelativePath(file),
             file
         }));
 
+
         const selected = await vscode.window.showQuickPick(items, {
             placeHolder: 'Select foundry.toml file'
         });
+
 
         if (selected) {
             const relativePath = vscode.workspace.asRelativePath(selected.file);
@@ -103,8 +128,10 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
+
     private _updateWebview() {
         if (!this._view) { return; }
+
 
         let mainContent: string;
         if (!vscode.workspace.workspaceFolders) {
@@ -113,6 +140,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
             const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
             const foundryPath = getFoundryConfigPath(workspaceRoot);
 
+
             if (!fs.existsSync(foundryPath)) {
                 mainContent = this._getNotFoundryContent();
             } else {
@@ -120,20 +148,25 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
             }
         }
 
+
         this._view.webview.html = this._getHtmlForWebview(mainContent);
     }
+
 
     private getCodiconsUri(): vscode.Uri {
         return vscode.Uri.joinPath(this._extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css');
     }
 
+
     private getToolkitUri(): vscode.Uri {
         return vscode.Uri.joinPath(this._extensionUri, 'node_modules', '@vscode/webview-ui-toolkit', 'dist', 'toolkit.min.js');
     }
 
+
     private _getHtmlForWebview(mainContent: string): string {
         const codiconsUri = this._view?.webview.asWebviewUri(this.getCodiconsUri());
         const toolkitUri = this._view?.webview.asWebviewUri(this.getToolkitUri());
+
 
         return `<!DOCTYPE html>
         <html lang="en">
@@ -178,6 +211,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         gap: 8px;
                         width: 100%;
                     }
+
 
                     .codicon {
                         font-size: 16px;
@@ -253,6 +287,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         }
                     }
 
+
                     document.addEventListener('click', (e) => {
                         const button = e.target.closest('vscode-button');
                         if (!button) return;
@@ -270,12 +305,14 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         }
                     });
 
+
                     document.getElementById('echidna-mode')?.addEventListener('change', (e) => {
                         vscode.postMessage({
                             type: 'updateEchidnaMode',
                             value: e.target.value
                         });
                     });
+
 
                     document.getElementById('echidna-test-limit')?.addEventListener('change', (e) => {
                         const value = parseInt(e.target.value, 10);
@@ -286,6 +323,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                             });
                         }
                     });
+
 
                     document.getElementById('echidna-workers')?.addEventListener('input', (e) => {
                         const value = e.target.value;
@@ -298,13 +336,14 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                     
                     document.getElementById('medusa-test-limit')?.addEventListener('change', (e) => {
                         const value = parseInt(e.target.value, 10);
-                        if (!isNaN(value) && value >= 1) {  // ← back to 1
+                        if (!isNaN(value) && value >= 1) {
                             vscode.postMessage({
                                 type: 'updateMedusaTestLimit',
                                 value: value
                             });
                         }
                     });
+
 
                     document.getElementById('medusa-workers')?.addEventListener('input', (e) => {
                         const value = e.target.value;
@@ -315,6 +354,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         });
                     });
 
+
                     document.getElementById('halmos-loop')?.addEventListener('change', (e) => {
                         const value = parseInt(e.target.value, 10);
                         if (!isNaN(value) && value >= 0) {
@@ -324,6 +364,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                             });
                         }
                     });
+
 
                     const radioGroup = document.getElementById('fuzzer-selection');
                     if (radioGroup) {
@@ -369,6 +410,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         });
                     }
 
+
                     setTimeout(() => {
                         updateAutoLabel('echidna-workers', 'echidna-auto-label');
                         updateAutoLabel('medusa-workers', 'medusa-auto-label');
@@ -378,6 +420,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
         </html>`;
     }
 
+
     private _getNoWorkspaceContent(): string {
         return `
             <div class="no-workspace">
@@ -385,6 +428,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
             </div>
         `;
     }
+
 
     private _getNotFoundryContent(): string {
         const configPath = vscode.workspace.getConfiguration('recon').get<string>('foundryConfigPath', 'foundry.toml');
@@ -399,6 +443,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
         `;
     }
 
+
     private _getMainContent(): string {
         const config = vscode.workspace.getConfiguration('recon');
         const defaultFuzzer = config.get('defaultFuzzer') || FuzzerTool.ECHIDNA;
@@ -406,19 +451,23 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
         const echidnaTestLimit = config.get('echidna.testLimit', 1000000);
         const echidnaWorkers = config.get<number | null>('echidna.workers', null);
         const echidnaOverride = config.get<boolean>('echidna.workersOverride', false);
-        const medusaTestLimit = config.get('medusa.testLimit', 1000000);  // keep default 1+ semantics if you want
+        const medusaTestLimit = config.get('medusa.testLimit', 1000000);
         const medusaWorkers = config.get<number | null>('medusa.workers', null);
         const medusaOverride = config.get<boolean>('medusa.workersOverride', false);
         const halmosLoop = config.get('halmos.loop', 10);
 
+
         const echidnaAutoWorkers = getOptimalWorkerCount('echidna');
         const medusaAutoWorkers = getOptimalWorkerCount('medusa');
+
 
         const showEchidnaAuto = !echidnaOverride;
         const showMedusaAuto = !medusaOverride;
 
+
         const echidnaDisplayValue = echidnaOverride && echidnaWorkers !== null ? echidnaWorkers.toString() : '';
         const medusaDisplayValue = medusaOverride && medusaWorkers !== null ? medusaWorkers.toString() : '';
+
 
         return `
             <div class="button-container">
@@ -443,6 +492,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         <vscode-radio value="${FuzzerTool.HALMOS}">Halmos</vscode-radio>
                     </vscode-radio-group>
                 </div>
+
 
                 <div class="settings-container" ${defaultFuzzer !== FuzzerTool.ECHIDNA ? 'style="display: none;"' : ''} id="echidna-settings">
                     <div class="setting-group">
@@ -478,6 +528,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         </span>
                     </div>
                 </div>
+
 
                 <div class="settings-container" ${defaultFuzzer !== FuzzerTool.MEDUSA ? 'style="display: none;"' : ''} id="medusa-settings">
                     <div class="setting-group">
@@ -522,6 +573,7 @@ export class ReconMainViewProvider implements vscode.WebviewViewProvider {
                         ></vscode-text-field>
                     </div>
                 </div>
+
 
             </div>
         `;

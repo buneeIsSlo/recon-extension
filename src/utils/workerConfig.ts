@@ -8,10 +8,12 @@ export type ExecType = 'echidna' | 'medusa';
  */
 export function getReservedCores(): number {
     const config = vscode.workspace.getConfiguration('recon');
-    const reserved = config.get<number>('reservedCores', 2);
+    const reserved = config.get<number>('reservedCores', 2);// get reserved cores, if empty default reserved cores to 2
+    const totalCores = os.cpus().length;
 
-    // Validate: ensure at least 0, max 16
-    return Math.max(0, Math.min(reserved, 16));
+    // Validate: ensure at least 0, max (total cores - 1)
+    const maxReservable = totalCores - 1; // it needs to fuzz at least with 1
+    return Math.max(0, Math.min(reserved, maxReservable));
 }
 
 /**
@@ -46,7 +48,7 @@ export function getOptimalWorkerCount(execType: ExecType): number {
             case 'medusa':
                 return availableCores;
             case 'echidna':
-                return Math.ceil(availableCores * 0.85); // Slightly conservative for echidna
+                return availableCores;
             default:
                 return availableCores;
         }
@@ -61,8 +63,7 @@ export function getOptimalWorkerCount(execType: ExecType): number {
 
         case 'echidna':
             // Echidna has diminishing returns beyond 8 workers
-            // Use ~75% of available cores, cap at 8
-            return Math.min(Math.ceil(availableCores * 0.75), 8);
+            return Math.min(availableCores, 8);
 
         default:
             return Math.min(availableCores, 8);
