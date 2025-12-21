@@ -12,6 +12,7 @@ import {
 } from "../utils";
 import { ServiceContainer } from "../services/serviceContainer";
 import { ToolValidationService } from "../services/toolValidationService";
+import { formatDuration } from "../utils";
 import { filterIgnoredProperties } from "../utils/propertyFilter";
 
 export function registerFuzzingCommands(
@@ -148,6 +149,7 @@ async function runFuzzer(
       cancellable: true,
     },
     async (progress, token) => {
+      const startTime = Date.now();
       return new Promise<void>((resolve, reject) => {
         childProcess = require("child_process").spawn(command, {
           cwd: foundryRoot,
@@ -365,8 +367,17 @@ async function runFuzzer(
                   percentage - (progress as any).lastPercentage || 0;
                 (progress as any).lastPercentage = percentage;
 
+                let etaStr = "";
+                if (current > 0) {
+                  const elapsedSeconds = (Date.now() - startTime) / 1000;
+                  const testsPerSecond = current / elapsedSeconds;
+                  const remainingTests = max - current;
+                  const remainingSeconds = remainingTests / testsPerSecond;
+                  etaStr = `ETA: ${formatDuration(remainingSeconds)}`;
+                }
+
                 progress.report({
-                  message: `Tests: ${failedTests}/${totalTests} | Progress: ${currentFuzz}/${maxFuzz} | Corpus: ${corpusSize}`,
+                  message: `Tests: ${etaStr} | ${failedTests}/${totalTests} | Progress: ${currentFuzz}/${maxFuzz} | Corpus: ${corpusSize}`,
                   increment: Math.max(0, increment),
                 });
               }
@@ -380,22 +391,33 @@ async function runFuzzer(
 
               if (corpusMatch && failuresMatch && callsMatch) {
                 const corpus = corpusMatch[1];
-                const [, failures, totalTests] = failuresMatch;
+                const [, failures, totalTestsStr] = failuresMatch;
+                const totalTests = parseInt(totalTestsStr);
                 const calls = callsMatch[1];
-                const testLimit = vscode.workspace
+                const currentCalls = parseInt(calls);
+                let testLimit = vscode.workspace
                   .getConfiguration("recon.medusa")
                   .get<number>("testLimit", 0);
 
                 const percentage =
                   testLimit > 0
-                    ? Math.min((parseInt(calls) / testLimit) * 100, 100)
+                    ? Math.min((currentCalls / testLimit) * 100, 100)
                     : 0;
                 const increment =
                   percentage - (progress as any).lastPercentage || 0;
                 (progress as any).lastPercentage = percentage;
 
+                let etaStr = "";
+                if (testLimit > 0 && currentCalls > 0) {
+                  const elapsedSeconds = (Date.now() - startTime) / 1000;
+                  const callsPerSecond = currentCalls / elapsedSeconds;
+                  const remainingCalls = testLimit - currentCalls;
+                  const remainingSeconds = remainingCalls / callsPerSecond;
+                  etaStr = `ETA: ${formatDuration(remainingSeconds)}`;
+                }
+
                 progress.report({
-                  message: `Tests: ${failures}/${totalTests} | Calls: ${calls} | Corpus: ${corpus}`,
+                  message: `Tests: ${etaStr} | ${failures}/${totalTestsStr} | Calls: ${calls} | Corpus: ${corpus}`,
                   increment: Math.max(0, increment),
                 });
               }
