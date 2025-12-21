@@ -14,6 +14,7 @@ import { ServiceContainer } from "../services/serviceContainer";
 import { ToolValidationService } from "../services/toolValidationService";
 import { formatDuration } from "../utils";
 import { filterIgnoredProperties } from "../utils/propertyFilter";
+import { getWorkerConfig } from "../utils/workerConfig"
 
 export function registerFuzzingCommands(
   context: vscode.ExtensionContext,
@@ -93,7 +94,8 @@ async function runFuzzer(
 
   if (fuzzerType === Fuzzer.ECHIDNA) {
     const config = vscode.workspace.getConfiguration("recon.echidna");
-    const workers = config.get<number>("workers", 8);
+    // const workers = config.get<number>("workers", 8); prev default, now dynamic
+    const workers = getWorkerConfig('echidna');
     const testLimit = config.get<number>("testLimit", 1000000);
     const mode = config.get<string>("mode", "assertion");
 
@@ -104,7 +106,8 @@ async function runFuzzer(
     } --test-limit ${testLimit} --test-mode ${mode}`;
   } else if (fuzzerType === Fuzzer.MEDUSA) {
     const config = vscode.workspace.getConfiguration("recon.medusa");
-    const workers = config.get<number>("workers", 10);
+    // const workers = config.get<number>("workers", 10); prev default, now dynamic
+    const workers = getWorkerConfig('medusa');
     const testLimit = config.get<number>("testLimit", 0);
 
     command = `${validatedCommand || "medusa"} fuzz --workers ${
@@ -117,9 +120,8 @@ async function runFuzzer(
     const config = vscode.workspace.getConfiguration("recon.halmos");
     const loop = config.get<number>("loop", 256);
 
-    command = `halmos --match-contract ${
-      target || "CryticTester"
-    } -vv --solver-timeout-assertion 0 --loop ${loop} `;
+    command = `halmos --match-contract ${target || "CryticTester"
+      } -vv --solver-timeout-assertion 0 --loop ${loop} `;
   }
 
   // Create output channel for live feedback
@@ -127,8 +129,8 @@ async function runFuzzer(
     fuzzerType === Fuzzer.ECHIDNA
       ? "Echidna"
       : fuzzerType === Fuzzer.MEDUSA
-      ? "Medusa"
-      : "Halmos"
+        ? "Medusa"
+        : "Halmos"
   );
   outputChannel.show();
 
@@ -144,8 +146,8 @@ async function runFuzzer(
         fuzzerType === Fuzzer.ECHIDNA
           ? "Echidna"
           : fuzzerType === Fuzzer.MEDUSA
-          ? "Medusa"
-          : "Halmos",
+            ? "Medusa"
+            : "Halmos",
       cancellable: true,
     },
     async (progress, token) => {
