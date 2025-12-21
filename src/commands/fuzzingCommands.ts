@@ -13,6 +13,7 @@ import {
 import { ServiceContainer } from "../services/serviceContainer";
 import { ToolValidationService } from "../services/toolValidationService";
 import { formatDuration } from "../utils";
+import { filterIgnoredProperties } from "../utils/propertyFilter";
 
 export function registerFuzzingCommands(
   context: vscode.ExtensionContext,
@@ -153,8 +154,9 @@ async function runFuzzer(
         childProcess = require("child_process").spawn(command, {
           cwd: foundryRoot,
           shell: true,
-          detached: true,
-          ...(process.platform !== "win32" && { stdio: "pipe" }),
+          ...(process.platform === "win32" 
+            ? { stdio: "pipe", detached: false }
+            : { stdio: "pipe", detached: true }),
           env: {
             ...process.env,
             PATH: getEnvironmentPath(),
@@ -250,8 +252,9 @@ async function runFuzzer(
                   }
 
                   // Handle broken properties
-                  if (results.brokenProperties.length > 0) {
-                    const repros = results.brokenProperties
+                  const filteredProperties = filterIgnoredProperties(results.brokenProperties);
+                  if (filteredProperties.length > 0) {
+                    const repros = filteredProperties
                       .map((prop) =>
                         prepareTrace(
                           fuzzerType,
@@ -263,7 +266,7 @@ async function runFuzzer(
                       .join("\n\n");
 
                     const answer = await vscode.window.showInformationMessage(
-                      `Found ${results.brokenProperties.length} broken properties. Save Foundry reproductions?`,
+                      `Found ${filteredProperties.length} broken properties. Save Foundry reproductions?`,
                       { modal: true },
                       "Yes",
                       "No"
