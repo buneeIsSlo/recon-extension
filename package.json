@@ -308,10 +308,20 @@
           "order": 2,
           "description": "Show all contract files including tests and libraries"
         },
+        "recon.ignorePropertyPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["canary_*"],
+          "scope": "resource",
+          "order": 3,
+          "description": "Glob patterns to filter out properties (e.g., canary_*)"
+        },
         "recon.echidna.mode": {
           "type": "string",
           "scope": "resource",
-          "order": 3,
+          "order": 4,
           "default": "assertion",
           "enum": [
             "property",
@@ -327,7 +337,7 @@
           "default": 1000000,
           "minimum": 1,
           "scope": "resource",
-          "order": 4,
+          "order": 5,
           "description": "Test limit for Echidna fuzzing"
         },
         "recon.echidna.workers": {
@@ -335,14 +345,14 @@
           "default": 8,
           "minimum": 1,
           "scope": "resource",
-          "order": 5,
+          "order": 6,
           "description": "Number of workers for Echidna fuzzing"
         },
         "recon.echidna.path": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "order": 6,
+          "order": 7,
           "description": "Custom path to echidna binary (optional, uses PATH if empty)"
         },
         "recon.medusa.testLimit": {
@@ -350,7 +360,7 @@
           "default": 0,
           "minimum": 0,
           "scope": "resource",
-          "order": 7,
+          "order": 8,
           "description": "Test limit for Medusa fuzzing"
         },
         "recon.medusa.workers": {
@@ -358,14 +368,14 @@
           "default": 10,
           "minimum": 1,
           "scope": "resource",
-          "order": 8,
+          "order": 9,
           "description": "Number of workers for Medusa fuzzing"
         },
         "recon.medusa.path": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "order": 9,
+          "order": 10,
           "description": "Custom path to medusa binary (optional, uses PATH if empty)"
         },
         "recon.halmos.depth": {
@@ -373,7 +383,7 @@
           "default": 22,
           "minimum": 1,
           "scope": "resource",
-          "order": 10,
+          "order": 11,
           "description": "Maximum call depth for Halmos symbolic execution"
         },
         "recon.halmos.unroll": {
@@ -381,7 +391,7 @@
           "default": 256,
           "minimum": 1,
           "scope": "resource",
-          "order": 11,
+          "order": 12,
           "description": "Maximum loop unrolling factor for Halmos"
         },
         "recon.halmos.solver": {
@@ -394,7 +404,7 @@
             "bitwuzla",
             "yices"
           ],
-          "order": 12,
+          "order": 13,
           "description": "SMT solver to use for Halmos symbolic execution"
         },
         "recon.foundryConfigPath": {
@@ -402,14 +412,14 @@
           "default": "foundry.toml",
           "description": "Path to foundry.toml configuration file (relative to workspace root)",
           "scope": "resource",
-          "order": 13
+          "order": 14
         },
         "recon.forge.buildArgs": {
           "type": "string",
           "default": "",
           "description": "Extra arguments to pass to forge build command (e.g. --via-ir)",
           "scope": "resource",
-          "order": 14
+          "order": 15
         },
         "recon.forge.testVerbosity": {
           "type": "string",
@@ -423,28 +433,28 @@
           ],
           "description": "Verbosity level for forge test command",
           "scope": "resource",
-          "order": 15
+          "order": 16
         },
         "recon.mocksFolderPath": {
           "type": "string",
           "default": "test/recon/mocks",
           "description": "Path to store generated mock contracts (relative to foundry.toml location)",
           "scope": "resource",
-          "order": 16
+          "order": 17
         },
         "recon.mockAutoSave": {
           "type": "boolean",
           "default": true,
           "description": "Automatically save generated mock contracts to disk",
           "scope": "resource",
-          "order": 17
+          "order": 18
         },
         "recon.customTestFolderPath": {
           "type": "string",
           "default": "",
           "description": "Custom path for test files (relative to foundry.toml location). If empty, standard paths will be searched",
           "scope": "resource",
-          "order": 18
+          "order": 19
         }
       }
     }
